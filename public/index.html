@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Scoop Tracker</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='7' fill='%23D9708A'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/style.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="#sell"><span class="brand-mark" aria-hidden="true"></span>Scoop Tracker</a>
+        <nav class="tabs" aria-label="Main">
+          <a href="#sell" data-view="sell">Sell</a>
+          <a href="#manager" data-view="manager">Stock Manager
+            <span id="pending-badge" class="count-badge" hidden aria-label="pending refill requests">0</span></a>
+          <a href="#reports" data-view="reports">Reports</a>
+          <a href="#demo" data-view="demo">DB Demo</a>
+        </nav>
+        <div class="topbar-tools">
+          <label class="name-field">Your name
+            <input id="user-name" value="Shillah" maxlength="40" autocomplete="off">
+          </label>
+          <span id="live" class="live" role="status">Live</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="page">
+      <section id="view-sell" class="view" aria-label="Sell">
+        <div id="refill-banner" class="banner" hidden></div>
+        <div class="sell-layout">
+          <div class="sell-main">
+            <form id="filters" class="filters" role="search">
+              <input type="search" id="filter-q" placeholder="Search flavors" aria-label="Search flavors">
+              <select id="filter-allergen" aria-label="Exclude allergen">
+                <option value="">All allergens</option>
+                <option value="nuts">No nuts</option>
+                <option value="milk">No milk</option>
+                <option value="gluten">No gluten</option>
+                <option value="eggs">No eggs</option>
+              </select>
+              <select id="filter-dietary" aria-label="Dietary">
+                <option value="">Any diet</option>
+                <option value="vegan">Vegan</option>
+                <option value="dairy-free">Dairy-free</option>
+              </select>
+              <label class="check"><input type="checkbox" id="filter-low"> Only low flavors</label>
+            </form>
+            <div id="flavor-grid" class="flavor-grid"><p class="empty">Loading flavors...</p></div>
+          </div>
+
+          <aside class="sell-side">
+            <section class="panel serving" aria-labelledby="serving-title">
+              <div class="panel-head">
+                <h2 id="serving-title">Serving</h2>
+                <span id="serving-count" class="muted"></span>
+              </div>
+              <div id="serving-slots" class="slots"></div>
+              <p id="serving-mix" class="serving-mix"></p>
+              <p class="serving-price">Price <strong id="serving-price" class="money"></strong></p>
+              <div class="serving-actions">
+                <button id="serving-clear" type="button" class="btn btn-ghost">Clear</button>
+                <button id="serving-sell" type="button" class="btn btn-primary" disabled>Sell serving</button>
+              </div>
+              <details class="query-panel">
+                <summary>Show the query</summary>
+                <pre id="serving-query"></pre>
+              </details>
+            </section>
+            <section id="money-panel" class="panel money-panel" aria-live="polite">
+              <p class="empty">Loading sales...</p>
+            </section>
+          </aside>
+        </div>
+      </section>
+
+      <section id="view-manager" class="view" aria-label="Stock Manager" hidden>
+        <div class="page-head">
+          <h1>Stock Manager</h1>
+          <p class="muted">Handle refill requests, fill up tubs and change what a serving costs.</p>
+        </div>
+        <div class="manager-top">
+          <section class="panel">
+            <div class="panel-head">
+              <h2>Refill requests</h2>
+              <span id="inbox-count" class="muted"></span>
+            </div>
+            <ul id="request-inbox" class="request-list"><li class="empty">Loading...</li></ul>
+          </section>
+          <section class="panel">
+            <h2>Sale settings</h2>
+            <form id="settings-form" class="settings-form">
+              <label class="field">Scoops per serving
+                <input type="number" name="scoopsPerSale" min="1" max="12" step="1" required>
+              </label>
+              <label class="field">Price per serving
+                <input type="number" name="pricePerSale" min="1" max="1000000" step="any" required>
+              </label>
+              <label class="field">Currency (for example UGX)
+                <input name="currency" maxlength="3" required>
+              </label>
+              <button type="submit" class="btn btn-primary">Save settings</button>
+            </form>
+            <p class="muted note">Changes only affect new sales. Past sales keep the amount they were sold for.</p>
+          </section>
+        </div>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Flavors</h2>
+            <button id="add-flavor" type="button" class="btn btn-small btn-primary">Add flavor</button>
+          </div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr><th>Flavor</th><th>Status</th><th class="num">Stock</th><th class="num">Low at</th>
+                  <th>Extra fields</th><th>Actions</th></tr>
+              </thead>
+              <tbody id="flavor-rows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Request history</h2>
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr><th>Flavor</th><th>Result</th><th>Requested by</th><th>Requested</th>
+                  <th>Handled by</th><th class="num">Waited</th></tr>
+              </thead>
+              <tbody id="history-rows"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section id="view-reports" class="view" aria-label="Reports" hidden>
+        <div class="page-head with-action">
+          <div>
+            <h1>Reports</h1>
+            <p class="muted">Every number here comes from a MongoDB aggregation pipeline. Open "Show the query" to see it.</p>
+          </div>
+          <button id="reports-refresh" type="button" class="btn btn-outline">Refresh</button>
+        </div>
+        <div id="reports-content" class="report-grid"><p class="empty">Loading reports...</p></div>
+      </section>
+
+      <section id="view-demo" class="view" aria-label="DB Demo" hidden>
+        <div class="page-head">
+          <h1>DB Demo</h1>
+          <p class="muted">Short experiments that show what MongoDB is doing behind the screens.</p>
+        </div>
+        <div class="demo-grid">
+          <section class="panel span-2">
+            <h2>Run a query with and without an index</h2>
+            <div class="inline-form">
+              <select id="explain-query" aria-label="Query to explain">
+                <option value="recent">Sales in the last 24 hours (index on soldAt)</option>
+                <option value="flavor">Sales that contain a flavor (multikey index on items.flavorId)</option>
+              </select>
+              <button id="explain-run" type="button" class="btn btn-primary">Run query</button>
+            </div>
+            <div id="explain-output"></div>
+          </section>
+          <section class="panel">
+            <h2>Simulate a rush</h2>
+            <p class="muted">Sells one random mixed serving every second for 15 seconds, using flavors that still have
+              stock. Watch the cards change colour and the money go up on the Sell screen.</p>
+            <button id="rush-run" type="button" class="btn btn-primary">Start rush</button>
+          </section>
+          <section class="panel">
+            <h2>Try an invalid sale</h2>
+            <p class="muted">Sends a serving with one scoop too few and one with one scoop too many to the API.</p>
+            <button id="invalid-run" type="button" class="btn btn-outline">Send invalid sales</button>
+            <div id="invalid-output"></div>
+          </section>
+          <section class="panel">
+            <h2>Reset demo data</h2>
+            <p class="muted">Restores the starting stock and clears sales, refill requests, stock logs and receipt numbers.</p>
+            <button id="reset-run" type="button" class="btn btn-danger">Reset demo data</button>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <div id="toasts" class="toasts"></div>
+    <dialog id="dialog" class="dialog"></dialog>
+    <script type="module" src="/js/client/main.js"></script>
+  </body>
+</html>
